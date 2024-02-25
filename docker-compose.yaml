@@ -1,0 +1,15 @@
+services:
+  forntend_dev:
+    build:
+      context:  .
+      target: build
+  
+  forntend_prod:
+    build:
+      context: .
+      target: prod
+    depends_on:
+      - forntend_dev
+    ports:
+      - 81:3000
+    
