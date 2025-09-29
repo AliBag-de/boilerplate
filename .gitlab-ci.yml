@@ -1,0 +1,56 @@
+# Docker-in-Docker (DinD) özelliğini kullanabilmek için gerekli.
+# Bu imaj, CI/CD pipeline'ında Docker komutlarını çalıştırmayı sağlar.
+image: docker:20.10.16
+
+# GitLab Runner'ın içinde Docker komutlarını çalıştırması için DinD servisi.
+services:
+  - docker:20.10.16-dind
+
+# CI/CD pipeline'ının aşamaları
+stages:
+  - build
+  - test
+
+# Ortak değişkenler
+# Bu değişkenler, Docker komutlarının doğru çalışması için gereklidir.
+variables:
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+
+# Derleme Aşaması
+build_all_services:
+  stage: build
+  script:
+    - echo "Docker imajları inşa ediliyor..."
+    # Bu komut, docker-compose.yaml dosyasındaki tüm servisleri build eder.
+    - docker-compose build
+  # artifacts:
+  #   paths:
+  #     - .
+  #   expire_in: 1 week
+  only:
+    - main
+
+# Test Aşaması
+test_services:
+  stage: test
+  script:
+    - echo "Servisler test ortamında ayağa kaldırılıyor..."
+    # --force-recreate ve --build komutları, en güncel imajların kullanılmasını sağlar.
+    - docker-compose up -d --force-recreate --build
+    - echo "Servislerin durumu kontrol ediliyor..."
+    - docker-compose ps
+    
+    # Servislerin tamamen başlatıldığından emin olmak için bir bekleme süresi eklenebilir.
+    # Bu, özellikle veritabanı gibi servisler için önemlidir.
+    - echo "Servislerin başlatılması için 10 saniye bekleniyor..."
+    - sleep 10
+    
+    # Frontend ve Backend servisleri için test komutlarını burada çalıştırabilirsiniz.
+    # Örneğin: docker-compose exec todo-backend npm test
+    # Örneğin: docker-compose exec todo-frontend npm run test
+    
+    - echo "Testler tamamlandı. Ortam temizleniyor..."
+    - docker-compose down
+  only:
+    - main
